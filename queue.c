@@ -1,7 +1,9 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "list.h"
 #include "queue.h"
 
 /* Notice: sometimes, Cppcheck would find the potential NULL pointer bugs,
@@ -10,11 +12,37 @@
  *   cppcheck-suppress nullPointer
  */
 
+typedef struct {
+    int size;
+    struct list_head head;
+} queue_t;
+
+/* Initial element */
+static inline void INIT_ELEMENT(element_t *e)
+{
+    e->value = NULL;
+    INIT_LIST_HEAD(&e->list);
+}
+
+/* Create element and initial it */
+element_t *element_new()
+{
+    element_t *e = malloc(sizeof(element_t));
+    INIT_ELEMENT(e);
+    return e;
+}
+
 
 /* Create an empty queue */
 struct list_head *q_new()
 {
-    return NULL;
+    /* Create queue and initial it */
+    queue_t *q = malloc(sizeof(queue_t));
+
+    q->size = 0;
+    INIT_LIST_HEAD(&q->head);
+
+    return &q->head;
 }
 
 /* Free all storage used by queue */
@@ -23,12 +51,38 @@ void q_free(struct list_head *l) {}
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    if (head == NULL)
+        return false;
+    if (s == NULL)
+        return false;
+
+    char *str = strdup(s);
+    element_t *e = element_new();
+    queue_t *q = container_of(head, queue_t, head);
+
+    e->value = str;
+    list_add(&e->list, head);
+    q->size += 1;
+
     return true;
 }
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
+    if (head == NULL)
+        return false;
+    if (s == NULL)
+        return false;
+
+    char *str = strdup(s);
+    element_t *e = element_new();
+    queue_t *q = container_of(head, queue_t, head);
+
+    e->value = str;
+    list_add_tail(&e->list, head);
+    q->size += 1;
+
     return true;
 }
 
@@ -47,7 +101,11 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
-    return -1;
+    if (head == NULL)
+        return -1;
+
+    queue_t *q = container_of(head, queue_t, head);
+    return q->size;
 }
 
 /* Delete the middle node in queue */
