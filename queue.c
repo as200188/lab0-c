@@ -94,7 +94,12 @@ bool q_insert_head(struct list_head *head, char *s)
         return false;
 
     char *str = strdup(s);
+    if (str == NULL)
+        goto malloc_failed;
     element_t *e = element_new();
+    if (e == NULL)
+        goto malloc_failed;
+
     queue_t *q = container_of(head, queue_t, head);
 
     e->value = str;
@@ -102,6 +107,13 @@ bool q_insert_head(struct list_head *head, char *s)
     q->size += 1;
 
     return true;
+
+malloc_failed:
+    if (str)
+        free(str);
+    if (e)
+        free(e);
+    return false;
 }
 
 /* Insert an element at tail of queue */
@@ -111,7 +123,12 @@ bool q_insert_tail(struct list_head *head, char *s)
         return false;
 
     char *str = strdup(s);
+    if (str == NULL)
+        goto malloc_failed;
     element_t *e = element_new();
+    if (e == NULL)
+        goto malloc_failed;
+
     queue_t *q = container_of(head, queue_t, head);
 
     e->value = str;
@@ -119,6 +136,13 @@ bool q_insert_tail(struct list_head *head, char *s)
     q->size += 1;
 
     return true;
+
+malloc_failed:
+    if (str)
+        free(str);
+    if (e)
+        free(e);
+    return false;
 }
 
 /* Remove an element from head of queue */
@@ -200,7 +224,23 @@ void q_swap(struct list_head *head)
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (head == NULL || list_is_singular(head))
+        return;
+
+    struct list_head *old_front = head->next, *old_end = head->prev;
+    struct list_head *iter = NULL, *next = NULL, *tmp = NULL;
+
+    list_for_each_safe (iter, next, head) {
+        tmp = iter->prev;
+        iter->prev = iter->next;
+        iter->next = tmp;
+    }
+
+    head->next = old_end;
+    head->prev = old_front;
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
