@@ -59,6 +59,15 @@ static inline void INIT_QUEUE(queue_t *q)
     INIT_LIST_HEAD(&q->head);
 }
 
+int compare(const void *a, const void *b)
+{
+    const struct list_head *a_list = a;
+    const struct list_head *b_list = b;
+    element_t *a_e = container_of(a_list, element_t, list);
+    element_t *b_e = container_of(b_list, element_t, list);
+    return strcmp(a_e->value, b_e->value);
+}
+
 /* Create an empty queue and initial it */
 struct list_head *q_new()
 {
@@ -183,7 +192,7 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 int q_size(struct list_head *head)
 {
     if (head == NULL)
-        return -1;
+        return 0;
 
     queue_t *q = container_of(head, queue_t, head);
     return q->size;
@@ -214,6 +223,34 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (head == NULL || list_empty(head) || list_is_singular(head))
+        return false;
+
+    struct list_head *first = head->next, *second = first->next,
+                     *second_next = second->next, *first_prev = NULL;
+    element_t *e = NULL;
+
+    while (first != head && second != head) {
+        if (compare(first, second) == 0) {
+            first_prev = first->prev;
+            while (second != head && compare(first, second) == 0) {
+                e = container_of(second, element_t, list);
+                element_del(e, head);
+                second = second_next;
+                second_next = second->next;
+            }
+
+            e = container_of(first, element_t, list);
+            element_del(e, head);
+            first_prev->next = second;
+            second->prev = first_prev;
+        }
+
+        first = second;
+        second = second_next;
+        second_next = second->next;
+    }
+
     return true;
 }
 
@@ -268,6 +305,28 @@ void q_reverse(struct list_head *head)
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (head == NULL || list_empty(head) || list_is_singular(head))
+        return;
+
+    int num_of_groups = q_size(head) / k;
+    int i = 0, j;
+    struct list_head *iter = head->next, *next = iter->next;
+    LIST_HEAD(res_head);
+
+    for (; i < num_of_groups; i++) {
+        LIST_HEAD(tmp_head);
+
+        for (j = 0; j < k; j++) {
+            list_move_tail(iter, &tmp_head);
+            iter = next;
+            next = iter->next;
+        }
+
+        q_reverse(&tmp_head);
+        list_splice_tail(&tmp_head, &res_head);
+    }
+
+    list_splice(&res_head, head);
 }
 
 void merge(struct list_head *head,
@@ -278,7 +337,6 @@ void merge(struct list_head *head,
                      *right_iter = right_head->next;
     struct list_head *left_next = left_iter->next,
                      *right_next = right_iter->next;
-    element_t *left_e = NULL, *right_e = NULL;
 
     while (left_iter != left_head || right_iter != right_head) {
         if (left_iter == left_head) {
@@ -295,10 +353,8 @@ void merge(struct list_head *head,
             continue;
         }
 
-        left_e = container_of(left_iter, element_t, list);
-        right_e = container_of(right_iter, element_t, list);
 
-        if (strcmp(left_e->value, right_e->value) < 0) {
+        if (compare(left_iter, right_iter) < 0) {
             list_move_tail(left_iter, head);
             left_iter = left_next;
             left_next = left_iter->next;
@@ -356,7 +412,25 @@ void q_sort(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (head == NULL || list_empty(head) || list_is_singular(head))
+        return 0;
+
+    struct list_head *iter = head->prev, *prev = iter->prev, *max = iter;
+    element_t *e = NULL;
+
+    while (iter != head) {
+        if (compare(iter, max) > 0)
+            max = iter;
+        else if (compare(iter, max) < 0) {
+            e = container_of(iter, element_t, list);
+            element_del(e, head);
+        }
+
+        iter = prev;
+        prev = iter->prev;
+    }
+
+    return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending order */
